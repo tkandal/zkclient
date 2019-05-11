@@ -89,7 +89,7 @@ type ZooKeeper interface {
 	ReadState() (*ZKStateInfo, error)
 }
 
-type zooKeeper struct {
+type ZookeeperClient struct {
 	zooHost   string
 	zkClient  *zookclient.ZooKeeperClient
 	nodeInfo  NodeInfo
@@ -101,7 +101,7 @@ type zooKeeper struct {
 	statePort string
 }
 
-func (zk *zooKeeper) Dial(host string) error {
+func (zk *ZookeeperClient) Dial(host string) error {
 	zkClient, err := zookclient.NewZooKeeperClient(host)
 	if err != nil {
 		return fmt.Errorf("connect %s failed; error = %v", zk.zooHost, err)
@@ -162,7 +162,7 @@ func (zk *zooKeeper) Dial(host string) error {
 	return nil
 }
 
-func (zk *zooKeeper) SetState(stateInfo ZKStateInfo) error {
+func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	content, err := toBytes(stateInfo)
 	if err != nil {
 		return fmt.Errorf("encode state-node %s%s failed; error = %v", zk.zooHost, zk.statePath, err)
@@ -173,7 +173,7 @@ func (zk *zooKeeper) SetState(stateInfo ZKStateInfo) error {
 	return nil
 }
 
-func (zk *zooKeeper) ReadState() (*ZKStateInfo, error) {
+func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	if !zk.zkClient.Exists(zk.statePath) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, zk.statePath)
 	}
@@ -193,7 +193,7 @@ func (zk *zooKeeper) ReadState() (*ZKStateInfo, error) {
 	return &zkStateInfo, nil
 }
 
-func (zk *zooKeeper) Close() error {
+func (zk *ZookeeperClient) Close() error {
 	zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
 	content, err := toBytes(zk.nodeInfo)
 	if err != nil {

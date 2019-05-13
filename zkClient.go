@@ -98,7 +98,6 @@ type ZookeeperClient struct {
 	StatePath string
 	Name      string
 	StateHost string
-	StatePort string
 }
 
 func (zk *ZookeeperClient) Dial(host string) error {
@@ -133,7 +132,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 		Name:      zk.Name,
 		Host:      zk.StateHost,
 		StartTime: startTime,
-		StatusURL: fmt.Sprintf("http://%s:%s", zk.StateHost, zk.StatePort),
+		StatusURL: fmt.Sprintf("http://%s", zk.StateHost),
 	}
 	content, err := toBytes(liveNodeInfo)
 	if err != nil {

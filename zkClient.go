@@ -87,8 +87,8 @@ var (
 type ZooKeeper interface {
 	Close() error
 	Dial(string) error
-	SetState(ZKStateInfo) error
-	ReadState() (*ZKStateInfo, error)
+	SetState(map[string]ZKStateInfo) error
+	ReadState() (map[string]ZKStateInfo, error)
 }
 
 type ZookeeperClient struct {
@@ -174,7 +174,7 @@ func (zk *ZookeeperClient) SetState(stateInfo map[string]ZKStateInfo) error {
 	return nil
 }
 
-func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
+func (zk *ZookeeperClient) ReadState() (map[string]ZKStateInfo, error) {
 	if !zk.zkClient.Exists(zk.StatePath) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, zk.StatePath)
 	}
@@ -187,11 +187,11 @@ func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	}
 
 	buf := bytes.NewBuffer(content)
-	zkStateInfo := ZKStateInfo{}
+	zkStateInfo := map[string]ZKStateInfo{}
 	if err := json.NewDecoder(buf).Decode(&zkStateInfo); err != nil {
 		return nil, fmt.Errorf("json decode state-info %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
 	}
-	return &zkStateInfo, nil
+	return zkStateInfo, nil
 }
 
 func (zk *ZookeeperClient) Close() error {

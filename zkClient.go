@@ -163,7 +163,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	return nil
 }
 
-func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
+func (zk *ZookeeperClient) SetState(stateInfo map[string]ZKStateInfo) error {
 	content, err := toBytes(stateInfo)
 	if err != nil {
 		return fmt.Errorf("encode state-node %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)

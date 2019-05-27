@@ -43,11 +43,13 @@ type LiveNodeInfo struct {
 
 // ZKStateInfo contains state-information that is pushed to Zookeeper
 type ZKStateInfo struct {
-	Name      string `json:"name"`
-	Status    string `json:"status,omitempty"`
-	StartTime int64  `json:"startTime,omitempty"`
-	EndTime   int64  `json:"endTime,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Name          string   `json:"name"`
+	Status        string   `json:"status,omitempty"`
+	StartTime     int64    `json:"startTime,omitempty"`
+	EndTime       int64    `json:"endTime,omitempty"`
+	LastUpdated   int64    `json:"lastUpdated,omitempty"`
+	SourceSystems []string `json:"sourceSystems,omitempty"`
+	Error         string   `json:"error,omitempty"`
 }
 
 // StateInfoElement contains the detailed information about this program

@@ -43,7 +43,7 @@ type LiveNodeInfo struct {
 
 // ZKStateInfo contains state-information that is pushed to Zookeeper
 type ZKStateInfo struct {
-	Name          string   `json:"name"`
+	Name          string   `json:"name,omitempty"`
 	Status        string   `json:"status,omitempty"`
 	StartTime     int64    `json:"startTime,omitempty"`
 	EndTime       int64    `json:"endTime,omitempty"`

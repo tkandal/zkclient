@@ -163,7 +163,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	return nil
 }
 
-func (zk *ZookeeperClient) SetState(stateInfo map[string]ZKStateInfo) error {
+func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	content, err := toBytes(stateInfo)
 	if err != nil {
 		return fmt.Errorf("encode state-node %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
@@ -174,7 +174,7 @@ func (zk *ZookeeperClient) SetState(stateInfo map[string]ZKStateInfo) error {
 	return nil
 }
 
-func (zk *ZookeeperClient) ReadState() (map[string]ZKStateInfo, error) {
+func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	if !zk.zkClient.Exists(zk.StatePath) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, zk.StatePath)
 	}
@@ -187,11 +187,11 @@ func (zk *ZookeeperClient) ReadState() (map[string]ZKStateInfo, error) {
 	}
 
 	buf := bytes.NewBuffer(content)
-	zkStateInfo := map[string]ZKStateInfo{}
+	zkStateInfo := ZKStateInfo{}
 	if err := json.NewDecoder(buf).Decode(&zkStateInfo); err != nil {
 		return nil, fmt.Errorf("json decode state-info %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
 	}
-	return zkStateInfo, nil
+	return &zkStateInfo, nil
 }
 
 func (zk *ZookeeperClient) Close() error {

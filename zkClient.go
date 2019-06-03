@@ -102,6 +102,7 @@ type ZookeeperClient struct {
 	StateHost string
 }
 
+// Dial connects to zookeeper
 func (zk *ZookeeperClient) Dial(host string) error {
 	zkClient, err := zookclient.NewZooKeeperClient(host)
 	if err != nil {
@@ -163,6 +164,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	return nil
 }
 
+// SetState sets state in state-path
 func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	content, err := toBytes(stateInfo)
 	if err != nil {
@@ -174,6 +176,7 @@ func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	return nil
 }
 
+// SetState reads state in state-path
 func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	if !zk.zkClient.Exists(zk.StatePath) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, zk.StatePath)
@@ -194,6 +197,7 @@ func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	return &zkStateInfo, nil
 }
 
+// Close closes the connection and sets lat exit-time.
 func (zk *ZookeeperClient) Close() error {
 	zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
 	content, err := toBytes(zk.nodeInfo)

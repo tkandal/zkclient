@@ -87,8 +87,8 @@ var (
 type ZooKeeper interface {
 	Close() error
 	Dial(string) error
-	SetState(map[string]ZKStateInfo) error
-	ReadState() (map[string]ZKStateInfo, error)
+	SetState(ZKStateInfo) error
+	ReadState() (*ZKStateInfo, error)
 }
 
 type ZookeeperClient struct {

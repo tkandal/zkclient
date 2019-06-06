@@ -74,15 +74,6 @@ func (si StateInfo) String() string {
 	return buf.String()
 }
 
-var (
-	// GitTag is the commit-hash from GIT that was used when building this program
-	GitTag string
-	// Builder is the username that built this program
-	Builder string
-	// BuiltAt is the timestamp when this program was built
-	BuiltAt string
-)
-
 // ZooKeeper defines the interface for a zookeeper-client
 type ZooKeeper interface {
 	Close() error

@@ -100,6 +100,9 @@ type ZookeeperClient struct {
 	StatePath string
 	Name      string
 	StateHost string
+	GitTag    string
+	Builder   string
+	BuiltAt   string
 }
 
 // Dial connects to zookeeper
@@ -150,7 +153,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	zk.nodeInfo = NodeInfo{
 		Name:          zk.Name,
 		LastStartTime: startTime,
-		Properties:    Properties{Version: fmt.Sprintf("Built=%s, GitTag=%s, Builder=%s", BuiltAt, GitTag, Builder)},
+		Properties:    Properties{Version: fmt.Sprintf("Built=%s, GitTag=%s, Builder=%s", zk.BuiltAt, zk.GitTag, zk.Builder)},
 	}
 	content, err = toBytes(zk.nodeInfo)
 	if err != nil {

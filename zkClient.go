@@ -94,6 +94,7 @@ type ZookeeperClient struct {
 	GitTag    string
 	Builder   string
 	BuiltAt   string
+	liveNode LiveNodeInfo
 }
 
 // Dial connects to zookeeper
@@ -140,6 +141,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 		_ = zk.zkClient.Close()
 		return fmt.Errorf("set live-node %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
 	}
+	zk.liveNode = liveNodeInfo
 
 	zk.nodeInfo = NodeInfo{
 		Name:          zk.Name,
@@ -164,8 +166,17 @@ func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	if err != nil {
 		return fmt.Errorf("encode state-node %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
 	}
-	if err := zk.zkClient.CreateEphemeralNode(zk.StatePath, content); err != nil {
+	if err = zk.zkClient.CreateEphemeralNode(zk.StatePath, content); err != nil {
 		return fmt.Errorf("set state-node %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
+	}
+
+	// create live-node in case it is gone
+	liveInfo, err := toBytes(zk.liveNode)
+	if err != nil {
+		return fmt.Errorf("encode live-node %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
+	}
+	if err = zk.zkClient.CreateEphemeralNode(zk.LivePath, liveInfo); err != nil {
+		return fmt.Errorf("set live-node %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
 	}
 	return nil
 }

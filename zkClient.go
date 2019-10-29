@@ -82,6 +82,29 @@ type ZooKeeper interface {
 	ReadState() (*ZKStateInfo, error)
 }
 
+// ServersetMember is an instance of serversets-status in Zookeeper.
+// Serversets are commonly used by Finagle and Aurora. https://github.com/twitter/finagle
+// NB! The field Status should always be set to "ALIVE", and will be removed in the future.
+type ServersetMember struct {
+	ServiceEndpoint     ServersetEndpoint            `json:"serviceEndpoint"`
+	AdditionalEndpoints map[string]ServersetEndpoint `json:"additionalEndpoints"`
+	Status              string                       `json:"status"`
+	Shard               int                          `json:"shard"`
+}
+
+type ServersetEndpoint struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+// NerveMember is an instance of nerve-status in Zookeeper.
+// Nerve is used in AirBnB's Nerve. https://github.com/airbnb/nerve
+type NerveMember struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+	Name string `json:"name"`
+}
+
 type ZookeeperClient struct {
 	zooHost   string
 	zkClient  *zookclient.ZooKeeperClient
@@ -94,7 +117,7 @@ type ZookeeperClient struct {
 	GitTag    string
 	Builder   string
 	BuiltAt   string
-	liveNode LiveNodeInfo
+	liveNode  LiveNodeInfo
 }
 
 // Dial connects to zookeeper
@@ -202,7 +225,70 @@ func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	return &zkStateInfo, nil
 }
 
-// Close closes the connection and sets lat exit-time.
+func (zk *ZookeeperClient) SetServersetMember(path string, ssm ServersetMember) error {
+	// Only ALIVE is legal
+	ssm.Status = "ALIVE"
+	content, err := toBytes(ssm)
+	if err != nil {
+		return fmt.Errorf("encode serversetMember-node %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	if err = zk.zkClient.CreateEphemeralNode(path, content); err != nil {
+		return fmt.Errorf("set serversetMember-node %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	return nil
+}
+
+func (zk *ZookeeperClient) ReadServersetMember(path string) (*ServersetMember, error) {
+	if !zk.zkClient.Exists(path) {
+		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, path)
+	}
+	content, err := zk.zkClient.GetData(path)
+	if err != nil {
+		return nil, fmt.Errorf("get data from %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	if content == nil {
+		return nil, nil
+	}
+	buf := bytes.NewBuffer(content)
+	ssm := &ServersetMember{}
+	if err := json.NewDecoder(buf).Decode(ssm); err != nil {
+		return nil, fmt.Errorf("json decode serversetMember-info %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	return ssm, nil
+}
+
+func (zk *ZookeeperClient) SetNerveMember(path string, nm NerveMember) error {
+	content, err := toBytes(nm)
+	if err != nil {
+		return fmt.Errorf("encode nervemember-node %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	if err = zk.zkClient.CreateEphemeralNode(path, content); err != nil {
+		return fmt.Errorf("set nervemember-node %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	return nil
+}
+
+func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
+	if !zk.zkClient.Exists(path) {
+		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, path)
+	}
+	content, err := zk.zkClient.GetData(path)
+	if err != nil {
+		return nil, fmt.Errorf("get data from %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	if content == nil {
+		return nil, nil
+	}
+	buf := bytes.NewBuffer(content)
+	nm := &NerveMember{}
+	if err := json.NewDecoder(buf).Decode(nm); err != nil {
+		return nil, fmt.Errorf("json decode nerveMember-info %s%s failed; error = %v", zk.zooHost, path, err)
+	}
+	return nm, nil
+}
+
+
+// Close closes the connection and sets last exit-time.
 func (zk *ZookeeperClient) Close() error {
 	zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
 	content, err := toBytes(zk.nodeInfo)

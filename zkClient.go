@@ -80,6 +80,10 @@ type ZooKeeper interface {
 	Dial(string) error
 	SetState(ZKStateInfo) error
 	ReadState() (*ZKStateInfo, error)
+	SetServersetMember(string, ServersetMember) error
+	ReadServersetMember(string) (*ServersetMember, error)
+	SetNerveMember(string, NerveMember) error
+	ReadNerveMember(string) (*NerveMember, error)
 }
 
 // ServersetMember is an instance of serversets-status in Zookeeper.
@@ -286,7 +290,6 @@ func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
 	}
 	return nm, nil
 }
-
 
 // Close closes the connection and sets last exit-time.
 func (zk *ZookeeperClient) Close() error {

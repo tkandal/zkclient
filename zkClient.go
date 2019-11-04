@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/tkandal/zookclient"
 	"time"
+
+	"github.com/tkandal/zookclient"
 )
 
 /*
@@ -217,7 +218,7 @@ func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get data from %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
 	}
-	if content == nil {
+	if content == nil || len(content) == 0 {
 		return nil, nil
 	}
 
@@ -250,7 +251,7 @@ func (zk *ZookeeperClient) ReadServersetMember(path string) (*ServersetMember, e
 	if err != nil {
 		return nil, fmt.Errorf("get data from %s%s failed; error = %v", zk.zooHost, path, err)
 	}
-	if content == nil {
+	if content == nil || len(content) == 0 {
 		return nil, nil
 	}
 	buf := bytes.NewBuffer(content)
@@ -280,7 +281,7 @@ func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get data from %s%s failed; error = %v", zk.zooHost, path, err)
 	}
-	if content == nil {
+	if content == nil || len(content) == 0 {
 		return nil, nil
 	}
 	buf := bytes.NewBuffer(content)

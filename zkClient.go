@@ -85,6 +85,8 @@ type ZooKeeper interface {
 	ReadServersetMember(string) (*ServersetMember, error)
 	SetNerveMember(string, NerveMember) error
 	ReadNerveMember(string) (*NerveMember, error)
+	GetData(string) ([]byte, error)
+	GetLeafNodes(string) ([]string, error)
 }
 
 // ServersetMember is an instance of serversets-status in Zookeeper.
@@ -306,6 +308,16 @@ func (zk *ZookeeperClient) Close() error {
 		return fmt.Errorf("close zookeeper %s failed; error = %v", zk.zooHost, err)
 	}
 	return nil
+}
+
+// GetData returns the data at the given path.
+func (zk *ZookeeperClient) GetData(path string) ([]byte, error) {
+	return zk.zkClient.GetData(path)
+}
+
+// GetLeafNodes get the paths to all leaf nodes under path.
+func (zk *ZookeeperClient) GetLeafNodes(root string) ([]string, error) {
+	return zk.zkClient.GetChildren(root)
 }
 
 func toBytes(obj interface{}) ([]byte, error) {

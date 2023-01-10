@@ -48,7 +48,7 @@ type ZKStateInfo struct {
 	Status        string   `json:"status,omitempty"`
 	StartTime     int64    `json:"startTime,omitempty"`
 	EndTime       int64    `json:"endTime,omitempty"`
-	LastUpdated   int64    `json:"lastUpdated,omitempty"`
+	LastUpdated   int64    `json:"lastUpdated"`
 	SourceSystems []string `json:"sourceSystems,omitempty"`
 	Error         string   `json:"error,omitempty"`
 }
@@ -58,7 +58,7 @@ type StateInfoElement struct {
 	Status        string   `json:"status,omitempty"`
 	SourceSystems []string `json:"sourceSystems,omitempty"`
 	StartTime     int64    `json:"startTime,omitempty"`
-	LastUpdated   int64    `json:"lastUpdated,omitempty"`
+	LastUpdated   int64    `json:"lastUpdated"`
 	EndTime       int64    `json:"endTime,omitempty"`
 	Error         string   `json:"error,omitempty"`
 }

@@ -46,7 +46,7 @@ type LiveNodeInfo struct {
 type ZKStateInfo struct {
 	Name          string   `json:"name,omitempty"`
 	Status        string   `json:"status,omitempty"`
-	StartTime     int64    `json:"startTime"`
+	StartTime     int64    `json:"startTime,omitempty"`
 	EndTime       int64    `json:"endTime"`
 	LastUpdated   int64    `json:"lastUpdated"`
 	SourceSystems []string `json:"sourceSystems,omitempty"`

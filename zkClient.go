@@ -78,6 +78,7 @@ func (si StateInfo) String() string {
 // ZooKeeper defines the interface for a zookeeper-client
 type ZooKeeper interface {
 	Close() error
+	IsClosed() bool
 	Dial(string) error
 	SetState(ZKStateInfo) error
 	ReadState() (*ZKStateInfo, error)
@@ -307,7 +308,13 @@ func (zk *ZookeeperClient) Close() error {
 	if err := zk.zkClient.Close(); err != nil {
 		return fmt.Errorf("close zookeeper %s failed; error = %v", zk.zooHost, err)
 	}
+	zk.zkClient = nil
 	return nil
+}
+
+// IsClosed returns true if the connection to Zookeeper is closed.
+func(zk *ZookeeperClient) IsClosed() bool {
+	return zk.zkClient == nil
 }
 
 // GetData returns the data at the given path.

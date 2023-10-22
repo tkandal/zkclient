@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tkandal/zookclient"
@@ -126,6 +127,7 @@ type ZookeeperClient struct {
 	Builder   string
 	BuiltAt   string
 	liveNode  LiveNodeInfo
+	mutex     *sync.Mutex
 }
 
 // Dial connects to zookeeper
@@ -136,6 +138,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	}
 	zk.zkClient = zkClient
 	zk.zooHost = host
+	zk.mutex = &sync.Mutex{}
 
 	if !zkClient.Exists(zk.LivePath) {
 		if err := zkClient.CreatePath(zk.LivePath); err != nil {
@@ -297,23 +300,28 @@ func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
 
 // Close closes the connection and sets last exit-time.
 func (zk *ZookeeperClient) Close() error {
-	zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
-	content, err := toBytes(zk.nodeInfo)
-	if err != nil {
-		return fmt.Errorf("encode last exit time for %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
+	zk.mutex.Lock()
+	defer zk.mutex.Unlock()
+
+	if zk.zkClient != nil {
+		zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
+		content, err := toBytes(zk.nodeInfo)
+		if err != nil {
+			return fmt.Errorf("encode last exit time for %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
+		}
+		if err := zk.zkClient.SetByte(zk.InfoPath, content); err != nil {
+			return fmt.Errorf("set last exit time %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
+		}
+		if err := zk.zkClient.Close(); err != nil {
+			return fmt.Errorf("close zookeeper %s failed; error = %v", zk.zooHost, err)
+		}
+		zk.zkClient = nil
 	}
-	if err := zk.zkClient.SetByte(zk.InfoPath, content); err != nil {
-		return fmt.Errorf("set last exit time %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
-	}
-	if err := zk.zkClient.Close(); err != nil {
-		return fmt.Errorf("close zookeeper %s failed; error = %v", zk.zooHost, err)
-	}
-	zk.zkClient = nil
 	return nil
 }
 
 // IsClosed returns true if the connection to Zookeeper is closed.
-func(zk *ZookeeperClient) IsClosed() bool {
+func (zk *ZookeeperClient) IsClosed() bool {
 	return zk.zkClient == nil
 }
 

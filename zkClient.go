@@ -132,65 +132,76 @@ type ZookeeperClient struct {
 
 // Dial connects to zookeeper
 func (zk *ZookeeperClient) Dial(host string) error {
-	zkClient, err := zookclient.NewZooKeeperClient(host)
-	if err != nil {
-		return fmt.Errorf("connect %s failed; error = %v", zk.zooHost, err)
+	if zk.mutex == nil {
+		zk.mutex = &sync.Mutex{}
 	}
-	zk.zkClient = zkClient
-	zk.zooHost = host
-	zk.mutex = &sync.Mutex{}
+	zk.mutex.Lock()
+	defer zk.mutex.Unlock()
+	if zk.zkClient == nil {
+		zkClient, err := zookclient.NewZooKeeperClient(host)
+		if err != nil {
+			return fmt.Errorf("connect %s failed; error = %v", zk.zooHost, err)
+		}
+		zk.zkClient = zkClient
+		zk.zooHost = host
 
-	if !zkClient.Exists(zk.LivePath) {
-		if err := zkClient.CreatePath(zk.LivePath); err != nil {
+		if !zkClient.Exists(zk.LivePath) {
+			if err := zkClient.CreatePath(zk.LivePath); err != nil {
+				_ = zk.zkClient.Close()
+				zk.zkClient = nil
+				return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
+			}
+		}
+		if !zkClient.Exists(zk.InfoPath) {
+			if err = zkClient.CreatePath(zk.InfoPath); err != nil {
+				_ = zk.zkClient.Close()
+				zk.zkClient = nil
+				return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
+			}
+		}
+		if !zkClient.Exists(zk.StatePath) {
+			if err = zkClient.CreatePath(zk.StatePath); err != nil {
+				_ = zk.zkClient.Close()
+				zk.zkClient = nil
+				return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
+			}
+		}
+
+		startTime := time.Now().UnixMilli()
+		liveNodeInfo := LiveNodeInfo{
+			Name:      zk.Name,
+			Host:      zk.StateHost,
+			StartTime: startTime,
+			StatusURL: fmt.Sprintf("http://%s", zk.StateHost),
+		}
+		content, err := toBytes(liveNodeInfo)
+		if err != nil {
 			_ = zk.zkClient.Close()
-			return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
+			zk.zkClient = nil
+			return fmt.Errorf("encode live-node %s:%s failed; error = %v", zk.zooHost, zk.LivePath, err)
+		}
+		if err = zkClient.CreateEphemeralNode(zk.LivePath, content); err != nil {
+			_ = zk.zkClient.Close()
+			zk.zkClient = nil
+			return fmt.Errorf("set live-node %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
+		}
+		zk.liveNode = liveNodeInfo
+
+		zk.nodeInfo = NodeInfo{
+			Name:          zk.Name,
+			LastStartTime: startTime,
+			Properties:    Properties{Version: fmt.Sprintf("Built=%s, GitTag=%s, Builder=%s", zk.BuiltAt, zk.GitTag, zk.Builder)},
+		}
+		content, err = toBytes(zk.nodeInfo)
+		if err != nil {
+			_ = zk.zkClient.Close()
+			zk.zkClient = nil
+			return fmt.Errorf("encode node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
+		}
+		if err = zkClient.CreateNode(zk.InfoPath, content); err != nil {
+			return fmt.Errorf("set node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
 		}
 	}
-	if !zkClient.Exists(zk.InfoPath) {
-		if err = zkClient.CreatePath(zk.InfoPath); err != nil {
-			_ = zk.zkClient.Close()
-			return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
-		}
-	}
-	if !zkClient.Exists(zk.StatePath) {
-		if err = zkClient.CreatePath(zk.StatePath); err != nil {
-			_ = zk.zkClient.Close()
-			return fmt.Errorf("create path %s%s failed; error = %v", zk.zooHost, zk.StatePath, err)
-		}
-	}
-
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	liveNodeInfo := LiveNodeInfo{
-		Name:      zk.Name,
-		Host:      zk.StateHost,
-		StartTime: startTime,
-		StatusURL: fmt.Sprintf("http://%s", zk.StateHost),
-	}
-	content, err := toBytes(liveNodeInfo)
-	if err != nil {
-		_ = zk.zkClient.Close()
-		return fmt.Errorf("encode live-node %s:%s failed; error = %v", zk.zooHost, zk.LivePath, err)
-	}
-	if err = zkClient.CreateEphemeralNode(zk.LivePath, content); err != nil {
-		_ = zk.zkClient.Close()
-		return fmt.Errorf("set live-node %s%s failed; error = %v", zk.zooHost, zk.LivePath, err)
-	}
-	zk.liveNode = liveNodeInfo
-
-	zk.nodeInfo = NodeInfo{
-		Name:          zk.Name,
-		LastStartTime: startTime,
-		Properties:    Properties{Version: fmt.Sprintf("Built=%s, GitTag=%s, Builder=%s", zk.BuiltAt, zk.GitTag, zk.Builder)},
-	}
-	content, err = toBytes(zk.nodeInfo)
-	if err != nil {
-		_ = zk.zkClient.Close()
-		return fmt.Errorf("encode node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
-	}
-	if err = zkClient.CreateNode(zk.InfoPath, content); err != nil {
-		return fmt.Errorf("set node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
-	}
-
 	return nil
 }
 
@@ -215,7 +226,7 @@ func (zk *ZookeeperClient) SetState(stateInfo ZKStateInfo) error {
 	return nil
 }
 
-// SetState reads state in state-path
+// ReadState reads state in state-path
 func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	if !zk.zkClient.Exists(zk.StatePath) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, zk.StatePath)
@@ -236,6 +247,7 @@ func (zk *ZookeeperClient) ReadState() (*ZKStateInfo, error) {
 	return &zkStateInfo, nil
 }
 
+// SetServersetMember sets Nerve information.
 func (zk *ZookeeperClient) SetServersetMember(path string, ssm ServersetMember) error {
 	// Only ALIVE is legal
 	ssm.Status = "ALIVE"
@@ -249,6 +261,7 @@ func (zk *ZookeeperClient) SetServersetMember(path string, ssm ServersetMember) 
 	return nil
 }
 
+// ReadServersetMember reads Nerve information.
 func (zk *ZookeeperClient) ReadServersetMember(path string) (*ServersetMember, error) {
 	if !zk.zkClient.Exists(path) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, path)
@@ -268,6 +281,7 @@ func (zk *ZookeeperClient) ReadServersetMember(path string) (*ServersetMember, e
 	return ssm, nil
 }
 
+// SetNerveMember sets a specific Nerve member information.
 func (zk *ZookeeperClient) SetNerveMember(path string, nm NerveMember) error {
 	content, err := toBytes(nm)
 	if err != nil {
@@ -279,6 +293,7 @@ func (zk *ZookeeperClient) SetNerveMember(path string, nm NerveMember) error {
 	return nil
 }
 
+// ReadNerveMember reads a specific Nerve member information.
 func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
 	if !zk.zkClient.Exists(path) {
 		return nil, fmt.Errorf("path %s%s does not exist", zk.zooHost, path)
@@ -304,7 +319,7 @@ func (zk *ZookeeperClient) Close() error {
 	defer zk.mutex.Unlock()
 
 	if zk.zkClient != nil {
-		zk.nodeInfo.LastExitTime = time.Now().UnixNano() / int64(time.Millisecond)
+		zk.nodeInfo.LastExitTime = time.Now().UnixMilli()
 		content, err := toBytes(zk.nodeInfo)
 		if err != nil {
 			return fmt.Errorf("encode last exit time for %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)

@@ -322,6 +322,8 @@ func (zk *ZookeeperClient) Close() error {
 
 // IsClosed returns true if the connection to Zookeeper is closed.
 func (zk *ZookeeperClient) IsClosed() bool {
+	zk.mutex.Lock()
+	defer zk.mutex.Unlock()
 	return zk.zkClient == nil
 }
 

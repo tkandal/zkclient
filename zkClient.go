@@ -101,6 +101,7 @@ type ServersetMember struct {
 	Shard               int                          `json:"shard"`
 }
 
+// ServersetEndpoint is declaration for a host and port for a Nerve endpoint.
 type ServersetEndpoint struct {
 	Host string `json:"host"`
 	Port int    `json:"port"`
@@ -114,6 +115,7 @@ type NerveMember struct {
 	Name string `json:"name"`
 }
 
+// ZookeeperClient is an object that acts as a zookeeper client.
 type ZookeeperClient struct {
 	zooHost   string
 	zkClient  *zookclient.ZooKeeperClient
@@ -315,6 +317,9 @@ func (zk *ZookeeperClient) ReadNerveMember(path string) (*NerveMember, error) {
 
 // Close closes the connection and sets last exit-time.
 func (zk *ZookeeperClient) Close() error {
+	if zk.mutex == nil {
+		zk.mutex = &sync.Mutex{}
+	}
 	zk.mutex.Lock()
 	defer zk.mutex.Unlock()
 
@@ -337,6 +342,9 @@ func (zk *ZookeeperClient) Close() error {
 
 // IsClosed returns true if the connection to Zookeeper is closed.
 func (zk *ZookeeperClient) IsClosed() bool {
+	if zk.mutex == nil {
+		zk.mutex = &sync.Mutex{}
+	}
 	zk.mutex.Lock()
 	defer zk.mutex.Unlock()
 	return zk.zkClient == nil

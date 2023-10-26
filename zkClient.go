@@ -201,6 +201,8 @@ func (zk *ZookeeperClient) Dial(host string) error {
 			return fmt.Errorf("encode node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
 		}
 		if err = zkClient.CreateNode(zk.InfoPath, content); err != nil {
+			_ = zk.zkClient.Close()
+			zk.zkClient = nil
 			return fmt.Errorf("set node-info %s%s failed; error = %v", zk.zooHost, zk.InfoPath, err)
 		}
 	}

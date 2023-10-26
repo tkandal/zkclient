@@ -142,7 +142,7 @@ func (zk *ZookeeperClient) Dial(host string) error {
 	if zk.zkClient == nil {
 		zkClient, err := zookclient.NewZooKeeperClient(host)
 		if err != nil {
-			return fmt.Errorf("connect %s failed; error = %v", zk.zooHost, err)
+			return fmt.Errorf("connect %s failed; error = %v", host, err)
 		}
 		zk.zkClient = zkClient
 		zk.zooHost = host
